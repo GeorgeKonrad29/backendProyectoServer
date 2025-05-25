@@ -22,28 +22,31 @@ router = APIRouter(
 # --- Endpoint para crear un item ---
 # Si quieres proteger esta ruta, añade Depends(get_current_user)
 @router.post("/", response_model=schemas.Item, status_code=status.HTTP_201_CREATED)
-async def create_item(item: schemas.ItemCreate, db: AsyncSession = Depends(get_db)): #, current_user: User = Depends(get_current_user)):
+async def create_item(item: schemas.ItemCreate, db: AsyncSession = Depends(get_db)):
     db_item = Item(**item.model_dump()) # Usa .model_dump() para Pydantic v2
-    async with db as session:
-        session.add(db_item)
-        await session.commit()
-        await session.refresh(db_item)
-        return db_item
+    # Aquí es donde se elimina el 'async with db as session:'
+    # y se usa 'db' directamente, ya que Depends(get_db) lo maneja.
+    db.add(db_item)
+    await db.commit()
+    await db.refresh(db_item)
+    return db_item
 
 # --- Endpoint para obtener un item por ID ---
 @router.get("/{item_id}", response_model=schemas.Item)
 async def read_item(item_id: int, db: AsyncSession = Depends(get_db)):
-    async with db as session:
-        db_item = await session.get(Item, item_id)
-        if db_item:
-            return db_item
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item no encontrado")
+    # Aquí también se elimina el 'async with db as session:'
+    # y se usa 'db' directamente.
+    db_item = await db.get(Item, item_id)
+    if db_item:
+        return db_item
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item no encontrado")
 
 # --- Endpoint para obtener todos los items ---
 @router.get("/", response_model=List[schemas.Item])
 async def read_items(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    async with db as session:
-        result = await session.execute(select(Item).offset(skip).limit(limit))
-        items = result.scalars().all()
-        return list(items)
+    # Aquí también se elimina el 'async with db as session:'
+    # y se usa 'db' directamente.
+    result = await db.execute(select(Item).offset(skip).limit(limit))
+    items = result.scalars().all()
+    return list(items)

@@ -30,7 +30,6 @@ class UserCreate(UserBase):
     
 
 class User(UserBase):
-    id: int
     rango: str
     intentos_login: int
     bloqueado: bool
@@ -44,3 +43,6 @@ class User(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    correo: Optional[str] = None
