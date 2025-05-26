@@ -68,7 +68,7 @@ CASCADE
 ) ENGINE=InnoDB;
 -- Creación de usuarios con privilegios limitados
 CREATE USER 'reservas_app'@'localhost' IDENTIFIED BY 'Un4C0ntrs3n!4F0rt3';
-GRANT SELECT, INSERT, UPDATE ON ProyectoReservas.* TO 'reservas_app'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON ProyectoReservas.* TO 'reservas_app'@'localhost';
 CREATE USER 'reservas_admin'@'localhost' IDENTIFIED BY 'Adm1n$3gur0P4ss!';
 GRANT ALL PRIVILEGES ON ProyectoReservas.* TO 'reservas_admin'@'localhost';
 -- Creación de vistas para seguridad adicional
