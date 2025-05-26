@@ -6,7 +6,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.future import select # Necesario para crear tablas
 from dotenv import load_dotenv
 import os
+# --- Importar Base de modelos (necesario para la creación de tablas) ---
+from .models.models import Base
 
+# --- Importar los routers ---
+from .routers import auth
+from .routers import users
+from .routers import items 
+from .routers import reservas
+from .routers import escenarios
+from .routers import elementos
 # Cargar variables de entorno al inicio de la aplicación
 load_dotenv()
 
@@ -31,13 +40,6 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-# --- Importar Base de modelos (necesario para la creación de tablas) ---
-from .models.models import Base
-
-# --- Importar los routers ---
-from .routers import auth
-from .routers import users
-from .routers import items # <--- NUEVO: Importa el router de items
 
 # --- Instancia de FastAPI ---
 app = FastAPI(
@@ -56,8 +58,10 @@ async def on_startup():
 # --- Incluir los routers ---
 app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(items.router) # <--- NUEVO: Incluye el router de items
-
+app.include_router(items.router) 
+app.include_router(reservas.router)
+app.include_router(escenarios.router)
+app.include_router(elementos.router)
 # --- Ruta raíz ---
 @app.get("/")
 async def root():
