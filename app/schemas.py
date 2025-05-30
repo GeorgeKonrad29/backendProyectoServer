@@ -62,8 +62,14 @@ class ElementoBase(BaseModel):
 class ElementoCreate(ElementoBase):
     pass
 
-class ElementoUpdate(ElementoBase):
-    pass
+class ElementoUpdate(BaseModel):
+    Nombre: Optional[str] = None
+    Descripcion: Optional[str] = None
+    Stock: Optional[int] = None
+    # No incluyas Codigo_Elemento aquí
+
+    class Config:
+        from_attributes = True
 
 class Elemento(ElementoBase):
     Codigo: int
@@ -144,8 +150,12 @@ class EscenarioBase(BaseModel):
 class EscenarioCreate(EscenarioBase):
     pass
 
-class EscenarioUpdate(EscenarioBase):
-    pass # Para actualizaciones, se podría hacer más granular con Optional
+
+class EscenarioUpdate(BaseModel):
+    Direccion: Optional[str] = None
+    Capacidad: Optional[int] = None
+    Precio: Optional[int] = None
+    Activo: Optional[bool] = None
 
 class Escenario(EscenarioBase):
     ID_Escenario: int
