@@ -273,3 +273,49 @@ async def remove_elemento_from_reserva(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al eliminar elemento de la reserva: {e}")
+# --- Endpoint para cancelar una reserva ---
+@router.delete("/{reserva_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_reserva(
+    reserva_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    reserva = await db.get(Reserva, reserva_id)
+    if not reserva or reserva.Correo_Usuario != current_user.correo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reserva no encontrada o no tienes permiso.")
+
+    try:
+        await db.delete(reserva)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al cancelar la reserva: {e}")
+    return {"detail": "Reserva cancelada exitosamente."}
+# --- Endpoint para actualizar una reserva (solo el estado) ---
+@router.put("/{reserva_id}", response_model=schemas.Reserva)
+async def update_reserva(
+    reserva_id: int,
+    reserva_update: schemas.ReservaUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    reserva = await db.get(Reserva, reserva_id)
+    if not reserva or reserva.Correo_Usuario != current_user.correo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reserva no encontrada o no tienes permiso.")
+    #validar que el usuario es admin o el dueño de la reserva
+    if current_user.rango != "admin" and reserva.Correo_Usuario != current_user.correo:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para actualizar esta reserva.")
+    # Solo se permite actualizar el estado
+    if reserva_update.Estado:
+        reserva.Estado = reserva_update.Estado
+
+    try:
+        await db.commit()
+        await db.refresh(reserva)
+
+        # Calcular y devolver el precio total actualizado
+        reserva.Precio_Total = await calculate_total_price(reserva, db)
+        return reserva
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al actualizar la reserva: {e}")

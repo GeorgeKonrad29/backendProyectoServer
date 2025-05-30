@@ -5,12 +5,12 @@ from datetime import datetime, date
 
 Base = declarative_base()
 
-class Item(Base):
-    __tablename__ = "items"
+#class Item(Base):
+#    __tablename__ = "items"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), index=True)
-    description = Column(String(255), nullable=True)
+#    id = Column(Integer, primary_key=True, index=True)
+#    name = Column(String(255), index=True)
+#    description = Column(String(255), nullable=True)
 
 class User(Base):
     __tablename__ = "Usuarios"

@@ -6,19 +6,19 @@ from typing import Optional, List # Para campos opcionales si los usas
 
 
 # Schemas base para reusabilidad
-class ItemBase(BaseModel):
-    nombre: str
-    descripcion: Optional[str] = None
-    precio: float
+#class ItemBase(BaseModel):
+#    nombre: str
+#    descripcion: Optional[str] = None
+#    precio: float
 
-class ItemCreate(ItemBase):
-    pass
+#class ItemCreate(ItemBase):
+#    pass
 
-class Item(ItemBase):
-    id: int
-    propietario_id: Optional[int] = None # Si los items tienen propietario
-    class Config:
-        from_attributes = True # O from_orm = True para Pydantic v1. Para Pydantic v2, es 'from_attributes = True'
+#class Item(ItemBase):
+#    id: int
+#    propietario_id: Optional[int] = None # Si los items tienen propietario
+#    class Config:
+#        from_attributes = True # O from_orm = True para Pydantic v1. Para Pydantic v2, es 'from_attributes = True'
 
 class UserBase(BaseModel):
     correo: EmailStr # Usa EmailStr para validación de correo
@@ -33,7 +33,6 @@ class UserUpdate(BaseModel):
     apellidos: Optional[str] = None 
        
 class UserAdminUpdate(BaseModel):
-    rango: Optional[str] = None
     bloqueado: Optional[bool] = None # Corresponde a tu campo 'bloqueado'
 
 class User(UserBase):
@@ -112,6 +111,16 @@ class Reserva(ReservaBase):
 
     class Config:
         from_attributes = True
+class ReservaUpdate(BaseModel): # Hereda de BaseModel directamente
+    Fecha: Optional[date] = None
+    Estado: Optional[str] = None # Si también se puede actualizar el estado
+
+    # Puedes añadir un campo para actualizar los elementos,
+    # por ejemplo, si quieres reemplazar la lista completa o añadir/eliminar.
+    # Esto depende de cómo quieras manejar la actualización de elementos en una reserva existente.
+    # Por ahora, lo dejamos simple.
+    # elementos_seleccionados: Optional[List[ReservaElementoCreate]] = None
+
 
 # ---ESQUEMAS: Escenario ---
 

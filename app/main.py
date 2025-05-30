@@ -12,7 +12,7 @@ from .models.models import Base
 # --- Importar los routers ---
 from .routers import auth
 from .routers import users
-from .routers import items 
+#from .routers import items 
 from .routers import reservas
 from .routers import escenarios
 from .routers import elementos
@@ -58,7 +58,7 @@ async def on_startup():
 # --- Incluir los routers ---
 app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(items.router) 
+#app.include_router(items.router) 
 app.include_router(reservas.router)
 app.include_router(escenarios.router)
 app.include_router(elementos.router)
