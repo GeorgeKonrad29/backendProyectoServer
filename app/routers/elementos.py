@@ -24,7 +24,7 @@ async def create_elemento(
     db: AsyncSession = Depends(get_db)
 ):
     #Chequeo de rol de administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden crear elementos.")
 
     db_elemento = Elemento(
@@ -72,7 +72,7 @@ async def update_elemento(
     db: AsyncSession = Depends(get_db)
 ):
     #Chequeo de rol de administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden actualizar elementos.")
 
     db_elemento = await db.get(Elemento, codigo_elemento)
@@ -94,7 +94,7 @@ async def delete_elemento(
     db: AsyncSession = Depends(get_db)
 ):
     # Chequeo de rol de administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden eliminar elementos.")
 
     db_elemento = await db.get(Elemento, codigo_elemento)

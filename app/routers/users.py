@@ -84,7 +84,7 @@ async def admin_update_user(
     db: AsyncSession = Depends(get_db)
 ):
     # 1. Verificar que el usuario actual es un administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para realizar esta acción. Se requiere rol de administrador."
@@ -106,7 +106,7 @@ async def admin_update_user(
     # 4. Actualizar los campos especificados por el administrador
     for field, value in user_admin_update.model_dump(exclude_unset=True).items():
         # Validar los valores del rango para evitar rangos inválidos
-        if field == "rango" and value not in ["usuario", "administrador"]:
+        if field == "rango" and value not in ["usuario", "admin"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Rango '{value}' no válido. Los rangos permitidos son 'usuario' y 'administrador'."

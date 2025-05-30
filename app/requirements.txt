@@ -1,0 +1,10 @@
+fastapi 
+uvicorn 
+sqlalchemy 
+aiomysql 
+python-dotenv 
+passlib 
+"python-jose[cryptography]" 
+pymysql
+email-validator
+bcrypt==4.0.1

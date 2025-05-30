@@ -24,7 +24,7 @@ async def create_escenario(
     db: AsyncSession = Depends(get_db)
 ):
     # Opcional: Aquí puedes añadir lógica para verificar si current_user.rango es "administrador"
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden crear escenarios.")
 
     db_escenario = Escenario(
@@ -72,7 +72,7 @@ async def update_escenario(
     db: AsyncSession = Depends(get_db)
 ):
     #Chequeo de rol de administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden actualizar escenarios.")
 
     db_escenario = await db.get(Escenario, escenario_id)
@@ -95,7 +95,7 @@ async def delete_escenario(
     db: AsyncSession = Depends(get_db)
 ):
     #Chequeo de rol de administrador
-    if current_user.rango != "administrador":
+    if current_user.rango != "admin":
          raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo los administradores pueden eliminar escenarios.")
 
     db_escenario = await db.get(Escenario, escenario_id)
