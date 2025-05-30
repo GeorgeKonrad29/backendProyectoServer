@@ -89,18 +89,29 @@ class ReservaElementoResponse(ReservaElementoBase):
 
 # --- ACTUALIZACIÓN DEL ESQUEMA: Reserva ---
 class ReservaBase(BaseModel):
-    Lugar: str
-    Precio: int # Precio base del escenario, no incluye elementos
+    # Estos campos son los que NO queremos recibir en ReservaCreate,
+    # pero sí queremos que estén en la respuesta de Reserva
     Fecha: date
-    ID_Escenario: int
+    ID_Escenario: int # ID del escenario
+    # Lugar y Precio ya no estarán aquí si los obtenemos de la DB en la creación
+    # Pero sí pueden estar en el modelo de respuesta 'Reserva' si se cargan de la DB
 
-class ReservaCreate(ReservaBase):
+
+class ReservaCreate(BaseModel): # <--- ¡AHORA HEREDA DIRECTAMENTE DE BaseModel!
+    Fecha: date # La fecha de la reserva, sí se necesita del usuario
+    ID_Escenario: int # El ID del escenario, sí se necesita del usuario
+    # Lugar y Precio NO están aquí, se obtendrán de la base de datos
+
     # Cuando creas una reserva, puedes opcionalmente incluir los elementos desde el principio
     elementos_seleccionados: Optional[List[ReservaElementoCreate]] = None
 
 class Reserva(ReservaBase):
     ID_Reserva: int
     Correo_Usuario: EmailStr
+    Lugar: str # Este campo se obtiene de la DB, no del usuario
+    Precio: int # Este campo se obtiene de la DB, no del usuario
+    Fecha: date
+    ID_Escenario: int
     Estado: str
     Fecha_creacion: datetime
     Precio_Total: Optional[int] = None # Nuevo campo para el precio total calculado

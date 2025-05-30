@@ -45,7 +45,7 @@ async def calculate_total_price(db_reserva: Reserva, db: AsyncSession) -> int:
 # --- Endpoint para crear una reserva ---
 @router.post("/", response_model=schemas.Reserva, status_code=status.HTTP_201_CREATED)
 async def create_reserva(
-    reserva_data: schemas.ReservaCreate, # Renombrado para evitar conflicto con el modelo
+    reserva_data: schemas.ReservaCreate, # Ahora solo ID_Escenario y Fecha (y elementos)
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -64,18 +64,16 @@ async def create_reserva(
             detail="Este escenario ya está reservado para la fecha especificada."
         )
 
-    # 2. Verificar existencia del escenario y su precio
+    # 2. Verificar existencia del escenario y obtener sus datos (Lugar, Precio)
     escenario = await db.get(Escenario, reserva_data.ID_Escenario)
     if not escenario:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Escenario no encontrado.")
 
     # 3. Crear la reserva base (sin elementos aún)
     db_reserva = Reserva(
-        Lugar=reserva_data.Lugar,
-        # El Precio aquí es el precio base del escenario, no el total aún.
-        # Puede ser el precio que viene del payload o el precio del escenario.
-        # Decidí usar el precio del escenario para consistencia.
-        Precio=escenario.Precio,
+        # Ahora toma Lugar y Precio directamente del objeto 'escenario'
+        Lugar=escenario.Direccion, # <--- CAMBIO: Usar escenario.Direccion como Lugar
+        Precio=escenario.Precio,   # <--- CAMBIO: Usar escenario.Precio
         Fecha=reserva_data.Fecha,
         ID_Escenario=reserva_data.ID_Escenario,
         Correo_Usuario=current_user.correo,
@@ -87,7 +85,7 @@ async def create_reserva(
     try:
         await db.flush() # flush para que db_reserva.ID_Reserva tenga un valor antes de los elementos
 
-        # 4. Añadir elementos si se proporcionaron
+        # 4. Añadir elementos si se proporcionaron (esta lógica se mantiene igual)
         if reserva_data.elementos_seleccionados:
             for elem_data in reserva_data.elementos_seleccionados:
                 elemento = await db.get(Elemento, elem_data.Codigo_Elemento)
@@ -106,24 +104,43 @@ async def create_reserva(
                 # Opcional: Reducir el stock del elemento
                 # elemento.Stock -= elem_data.Cantidad
 
-
         await db.commit()
-        await db.refresh(db_reserva)
+        # await db.refresh(db_reserva) # Este refresh inicial podría no ser necesario si el selectinload lo reemplaza
 
-        # Cargar los elementos de la reserva después del refresh
-        await db.execute(select(Reserva).options(selectinload(Reserva.reservas_elementos)).where(Reserva.ID_Reserva == db_reserva.ID_Reserva))
-        # Re-fetch the object to ensure relationships are loaded
-        db_reserva = (await db.execute(select(Reserva).options(selectinload(Reserva.reservas_elementos).selectinload(ReservaElemento.elemento)).where(Reserva.ID_Reserva == db_reserva.ID_Reserva))).scalars().first()
+        # Después del commit, necesitamos obtener el objeto de la reserva
+        # con todas sus relaciones cargadas para el esquema de respuesta.
+        # Es crucial que este select cargue todas las columnas de Reserva también.
+        loaded_reserva_result = await db.execute(
+            select(Reserva)
+            .options(
+                selectinload(Reserva.reservas_elementos).selectinload(ReservaElemento.elemento)
+            )
+            .where(Reserva.ID_Reserva == db_reserva.ID_Reserva) # Usa el ID generado por el flush
+        )
+        final_reserva = loaded_reserva_result.scalars().first()
 
+        if not final_reserva:
+            # Esto sería muy inusual si el commit fue exitoso
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Reserva no pudo ser recuperada después de la creación.")
 
         # Calcular y asignar el precio total antes de devolver la respuesta
-        db_reserva.Precio_Total = await calculate_total_price(db_reserva, db)
+        # Asegúrate de que calculate_total_price actualice el objeto final_reserva
+        final_reserva.Precio_Total = await calculate_total_price(final_reserva, db)
 
-        return db_reserva
+        # Puede que necesites un refresh aquí si Precio_Total es una columna en la DB
+        # que se actualiza por un trigger o si calculate_total_price guarda algo en la DB.
+        # Si calculate_total_price solo calcula y asigna al objeto Python, no es necesario.
+        # Si Precio_Total es una columna directamente en el modelo y es actualizado por calculate_total_price
+        # a través de una operación de DB, entonces un refresh de final_reserva podría ser necesario.
+        # Si Precio_Total se asigna *directamente al objeto ORM* (final_reserva.Precio_Total = ...),
+        # Pydantic lo verá sin necesidad de refresh adicional.
+
+        return final_reserva # <-- Retorna el objeto que tiene todo cargado
+
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error de integridad al crear la reserva (ej. ID de elemento duplicado).")
-    except HTTPException as e: # Captura HTTPExceptions lanzadas por validaciones internas
+    except HTTPException as e:
         await db.rollback()
         raise e
     except Exception as e:
@@ -146,6 +163,13 @@ async def get_my_reservas(
         .where(Reserva.Correo_Usuario == current_user.correo)
     )
     reservas = result.scalars().unique().all() # .unique() para evitar duplicados si hay muchos elementos
+    print(f"DEBUG: Número de reservas cargadas: {len(reservas)}")
+    for i, reserva in enumerate(reservas):
+        print(f"DEBUG: Reserva {i}: ID={reserva.ID_Reserva}")
+        print(f"DEBUG: Reserva {i}: Lugar={reserva.Lugar}") # <-- Verifica esto
+        print(f"DEBUG: Reserva {i}: Fecha={reserva.Fecha}") # <-- Verifica esto
+        print(f"DEBUG: Reserva {i}: Atributos cargados: {reserva.__dict__.keys()}")
+        print(f"DEBUG: Reserva {i}: Objeto completo: {reserva.__dict__}") # Ver todos los atributos
 
     # Calcular Precio_Total para cada reserva
     for reserva in reservas:
