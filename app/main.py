@@ -11,8 +11,7 @@ from .models.models import Base
 
 # --- Importar los routers ---
 from .routers import auth
-from .routers import users
-#from .routers import items 
+from .routers import users 
 from .routers import reservas
 from .routers import escenarios
 from .routers import elementos

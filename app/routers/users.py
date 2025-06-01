@@ -35,8 +35,6 @@ async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_d
         bloqueado=False,
         fecha_creacion=datetime.utcnow()
     )
-    # Aquí es donde se elimina el 'async with db as session:'
-    # y se usa 'db' directamente, ya que Depends(get_db) lo maneja.
     db.add(db_user)
     try:
         await db.commit() # Confirma la transacción y guarda el usuario
@@ -52,12 +50,11 @@ async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_d
 # --- Endpoint para obtener el usuario actual (ruta protegida) ---
 @router.get("/me", response_model=schemas.User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
-    # get_current_user ya devuelve el objeto User completo, así que solo lo retornamos
     return current_user
 
 @router.put("/me", response_model=schemas.User)
 async def update_user_me(
-    user_update: schemas.UserUpdate, # Usamos el nuevo esquema UserUpdate
+    user_update: schemas.UserUpdate, # Usamos el esquema UserUpdate
     current_user: User = Depends(get_current_user), # El usuario actual que está haciendo la solicitud
     db: AsyncSession = Depends(get_db)
 ):
@@ -95,7 +92,7 @@ async def admin_update_user(
     if not user_to_update:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
-    # 3. Evitar que un administrador se cambie a sí mismo si no es el super-admin (opcional)
+    # 3. Evitar que un administrador se cambie a sí mismo
     # Por seguridad, un admin no debería poder degradarse o bloquearse a sí mismo accidentalmente
     if user_to_update.correo == current_user.correo:
         raise HTTPException(
@@ -122,7 +119,7 @@ async def admin_update_user(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al actualizar el usuario: {e}")
 
 
-# --- Opcional: Obtener un usuario por ID (ejemplo de ruta) ---
+# --- Obtener un usuario por ID ---
 @router.get("/{user_correo}", response_model=schemas.User) # Ruta para buscar por correo
 async def read_user(user_correo: EmailStr, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.correo == user_correo)) # Buscar por correo
@@ -131,12 +128,20 @@ async def read_user(user_correo: EmailStr, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     return user
 
-# --- Opcional: Obtener todos los usuarios (ejemplo de ruta, requiere autenticación de administrador) ---
+# --- Obtener todos los usuarios (ejemplo de ruta, requiere autenticación de administrador) ---
 @router.get("/", response_model=List[schemas.User])
-async def read_users(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+async def read_users(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db),
+                     current_user: User = Depends(get_current_user)):
+    """Obtiene una lista de usuarios con paginación."""
     # Aquí también se elimina el 'async with db as session:'
     result = await db.execute(
         select(User).offset(skip).limit(limit)
+
     )
+    if current_user.rango != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para realizar esta acción. Se requiere rol de administrador."
+        )
     users = result.scalars().all()
     return users

@@ -18,7 +18,7 @@ from ..security import verify_password # Importa verify_password desde security.
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-MAX_LOGIN_ATTEMPTS = 10 # Tu constante para el límite de intentos
+MAX_LOGIN_ATTEMPTS = 10 
 
 if not SECRET_KEY:
     raise ValueError("La variable de entorno SECRET_KEY no está configurada.")
@@ -36,7 +36,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") # Asegúrate de que sea "login"
 
-# Esta función la usaremos para proteger rutas y ahora devuelve el objeto User completo
+# Esta función la usaremos para proteger rutas
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,8 +51,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except JWTError:
         raise credentials_exception
 
-    # Aquí es donde se elimina el 'async with db as session:'
-    # y se usa 'db' directamente, ya que Depends(get_db) lo maneja.
+    
     result = await db.execute(select(User).where(User.correo == correo))
     user = result.scalars().first()
     if user is None:
@@ -68,8 +67,7 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.Token) # La ruta final será /login/
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    # Aquí es donde se elimina el 'async with db as session:'
-    # y se usa 'db' directamente.
+    
     # 1. Buscar al usuario en la DB por correo
     result = await db.execute(select(User).where(User.correo == form_data.username))
     user_in_db = result.scalars().first()

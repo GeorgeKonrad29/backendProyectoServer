@@ -1,5 +1,3 @@
-# app/routers/reservas.py
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -28,7 +26,7 @@ async def calculate_total_price(db_reserva: Reserva, db: AsyncSession) -> int:
         if escenario:
             total_price += escenario.Precio
         else:
-            # Esto no debería pasar si la FK es válida, pero es una buena práctica
+            # Esto no debería pasar si la FK es válida
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Escenario asociado no encontrado.")
 
     # Precio de los elementos
@@ -105,11 +103,6 @@ async def create_reserva(
                 # elemento.Stock -= elem_data.Cantidad
 
         await db.commit()
-        # await db.refresh(db_reserva) # Este refresh inicial podría no ser necesario si el selectinload lo reemplaza
-
-        # Después del commit, necesitamos obtener el objeto de la reserva
-        # con todas sus relaciones cargadas para el esquema de respuesta.
-        # Es crucial que este select cargue todas las columnas de Reserva también.
         loaded_reserva_result = await db.execute(
             select(Reserva)
             .options(
@@ -124,16 +117,7 @@ async def create_reserva(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Reserva no pudo ser recuperada después de la creación.")
 
         # Calcular y asignar el precio total antes de devolver la respuesta
-        # Asegúrate de que calculate_total_price actualice el objeto final_reserva
         final_reserva.Precio_Total = await calculate_total_price(final_reserva, db)
-
-        # Puede que necesites un refresh aquí si Precio_Total es una columna en la DB
-        # que se actualiza por un trigger o si calculate_total_price guarda algo en la DB.
-        # Si calculate_total_price solo calcula y asigna al objeto Python, no es necesario.
-        # Si Precio_Total es una columna directamente en el modelo y es actualizado por calculate_total_price
-        # a través de una operación de DB, entonces un refresh de final_reserva podría ser necesario.
-        # Si Precio_Total se asigna *directamente al objeto ORM* (final_reserva.Precio_Total = ...),
-        # Pydantic lo verá sin necesidad de refresh adicional.
 
         return final_reserva # <-- Retorna el objeto que tiene todo cargado
 
@@ -178,7 +162,6 @@ async def get_my_reservas(
     return list(reservas)
 
 # --- Endpoint para obtener una reserva específica por ID_Reserva ---
-# Modificado para cargar los elementos asociados
 @router.get("/{reserva_id}", response_model=schemas.Reserva)
 async def get_reserva_by_id(
     reserva_id: int,
@@ -202,7 +185,7 @@ async def get_reserva_by_id(
 
     return reserva
 
-# --- NUEVOS ENDPOINTS: Añadir/Quitar Elementos a una Reserva Existente ---
+# --- ENDPOINTS: Añadir/Quitar Elementos a una Reserva Existente ---
 
 @router.post("/{reserva_id}/elementos", response_model=schemas.Reserva, status_code=status.HTTP_200_OK)
 async def add_elementos_to_reserva(
@@ -232,7 +215,7 @@ async def add_elementos_to_reserva(
 
         if existing_res_elem:
             existing_res_elem.Cantidad += elem_data.Cantidad
-            # Opcional: ajustar stock si se añade más
+            # ajustar stock si se añade más
             # elemento.Stock -= elem_data.Cantidad
         else:
             db_reserva_elemento = ReservaElemento(
@@ -241,7 +224,7 @@ async def add_elementos_to_reserva(
                 Cantidad=elem_data.Cantidad
             )
             db.add(db_reserva_elemento)
-            # Opcional: reducir stock
+            # reducir stock
             # elemento.Stock -= elem_data.Cantidad
     try:
         await db.commit()
@@ -279,10 +262,7 @@ async def remove_elemento_from_reserva(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El elemento no está asociado a esta reserva.")
 
     try:
-        # Opcional: Devolver el stock del elemento
-        # elemento = await db.get(Elemento, codigo_elemento)
-        # if elemento:
-        #     elemento.Stock += reserva_elemento.Cantidad
+        
 
         await db.delete(reserva_elemento)
         await db.commit()

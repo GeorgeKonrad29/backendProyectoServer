@@ -5,20 +5,6 @@ from datetime import datetime, date
 from typing import Optional, List # Para campos opcionales si los usas
 
 
-# Schemas base para reusabilidad
-#class ItemBase(BaseModel):
-#    nombre: str
-#    descripcion: Optional[str] = None
-#    precio: float
-
-#class ItemCreate(ItemBase):
-#    pass
-
-#class Item(ItemBase):
-#    id: int
-#    propietario_id: Optional[int] = None # Si los items tienen propietario
-#    class Config:
-#        from_attributes = True # O from_orm = True para Pydantic v1. Para Pydantic v2, es 'from_attributes = True'
 
 class UserBase(BaseModel):
     correo: EmailStr # Usa EmailStr para validación de correo
@@ -33,7 +19,7 @@ class UserUpdate(BaseModel):
     apellidos: Optional[str] = None 
        
 class UserAdminUpdate(BaseModel):
-    bloqueado: Optional[bool] = None # Corresponde a tu campo 'bloqueado'
+    bloqueado: Optional[bool] = None # Corresponde a campo 'bloqueado'
 
 class User(UserBase):
     rango: str
@@ -41,7 +27,7 @@ class User(UserBase):
     bloqueado: bool
     fecha_creacion: datetime
     ultimo_login: Optional[datetime] = None
-    # items: List[Item] = [] # Si un usuario puede tener items
+    
     class Config:
         from_attributes = True # O from_orm = True para Pydantic v1
 
@@ -53,7 +39,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     correo: Optional[str] = None
 
-# --- NUEVOS ESQUEMAS: Elemento ---
+# --- ESQUEMAS: Elemento ---
 class ElementoBase(BaseModel):
     Nombre: str
     Precio: int
@@ -66,7 +52,6 @@ class ElementoUpdate(BaseModel):
     Nombre: Optional[str] = None
     Descripcion: Optional[str] = None
     Stock: Optional[int] = None
-    # No incluyas Codigo_Elemento aquí
 
     class Config:
         from_attributes = True
@@ -77,7 +62,7 @@ class Elemento(ElementoBase):
     class Config:
         from_attributes = True
 
-# --- NUEVO ESQUEMA: Para la tabla intermedia (ReservaElemento) ---
+# --- ESQUEMA: Para la tabla intermedia (ReservaElemento) ---
 class ReservaElementoBase(BaseModel):
     Codigo_Elemento: int
     Cantidad: int
@@ -86,29 +71,22 @@ class ReservaElementoCreate(ReservaElementoBase):
     pass
 
 class ReservaElementoResponse(ReservaElementoBase):
-    # Aquí podemos incluir información del elemento si es necesario
-    # Por ejemplo, para mostrar el nombre del elemento en la respuesta
-    # elemento: Elemento # Esto requeriría una carga eager en la query
 
     class Config:
         from_attributes = True
 
-# --- ACTUALIZACIÓN DEL ESQUEMA: Reserva ---
+# --- ESQUEMA: Reserva ---
 class ReservaBase(BaseModel):
     # Estos campos son los que NO queremos recibir en ReservaCreate,
     # pero sí queremos que estén en la respuesta de Reserva
     Fecha: date
     ID_Escenario: int # ID del escenario
-    # Lugar y Precio ya no estarán aquí si los obtenemos de la DB en la creación
-    # Pero sí pueden estar en el modelo de respuesta 'Reserva' si se cargan de la DB
 
-
-class ReservaCreate(BaseModel): # <--- ¡AHORA HEREDA DIRECTAMENTE DE BaseModel!
+class ReservaCreate(BaseModel): # <--- ¡HEREDA DIRECTAMENTE DE BaseModel!
     Fecha: date # La fecha de la reserva, sí se necesita del usuario
     ID_Escenario: int # El ID del escenario, sí se necesita del usuario
     # Lugar y Precio NO están aquí, se obtendrán de la base de datos
 
-    # Cuando creas una reserva, puedes opcionalmente incluir los elementos desde el principio
     elementos_seleccionados: Optional[List[ReservaElementoCreate]] = None
 
 class Reserva(ReservaBase):
@@ -120,7 +98,7 @@ class Reserva(ReservaBase):
     ID_Escenario: int
     Estado: str
     Fecha_creacion: datetime
-    Precio_Total: Optional[int] = None # Nuevo campo para el precio total calculado
+    Precio_Total: Optional[int] = None # Campo para el precio total calculado
 
     # Incluir la lista de elementos asociados a la reserva
     # Nota: Esto requiere que la query de la reserva haga `options(selectinload(Reserva.reservas_elementos))`
@@ -130,21 +108,16 @@ class Reserva(ReservaBase):
         from_attributes = True
 class ReservaUpdate(BaseModel): # Hereda de BaseModel directamente
     Fecha: Optional[date] = None
-    Estado: Optional[str] = None # Si también se puede actualizar el estado
+    Estado: Optional[str] = None # También se puede actualizar el estado
 
-    # Puedes añadir un campo para actualizar los elementos,
-    # por ejemplo, si quieres reemplazar la lista completa o añadir/eliminar.
-    # Esto depende de cómo quieras manejar la actualización de elementos en una reserva existente.
-    # Por ahora, lo dejamos simple.
-    # elementos_seleccionados: Optional[List[ReservaElementoCreate]] = None
-
+    
 
 # ---ESQUEMAS: Escenario ---
 
 class EscenarioBase(BaseModel):
     Direccion: str
     Capacidad: int
-    Precio: int # <-- CAMBIADO A INTEGER AQUÍ TAMBIÉN
+    Precio: int 
     Activo: bool
 
 class EscenarioCreate(EscenarioBase):
